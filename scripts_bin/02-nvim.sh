@@ -1,50 +1,48 @@
 #!/bin/bash
 set -e
 
-echo "📝 [2/4] Installazione Neovim (Latest Stable)..."
+echo "📝 [2/4] Installazione Neovim (System-wide in /opt)..."
 
-INSTALL_DIR="$HOME/.local/bin"
-mkdir -p "$INSTALL_DIR"
+# URL e Nomi file basati sulla tua richiesta
+NVIM_URL="https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz"
+NVIM_FILENAME="nvim-linux-x86_64.tar.gz"
+INSTALL_DIR="/opt/nvim-linux-x86_64"
 
-# Rimuovi eventuali download parziali precedenti
-rm -f nvim-linux64.tar.gz
-
+# 1. Scarica il file
 echo "   ⬇️  Scaricamento in corso..."
-# --fail: si ferma se il server dà errore (es. 404)
-# --location: segue i redirect
-curl -L --fail -o nvim-linux64.tar.gz https://github.com/neovim/neovim/releases/latest/download/nvim-linux64.tar.gz
+rm -f "$NVIM_FILENAME" # Rimuove residui
+curl -LO --fail "$NVIM_URL"
 
-# Verifica che il file sia davvero un archivio gzip
-if ! file nvim-linux64.tar.gz | grep -q "gzip compressed data"; then
-  echo "❌ ERRORE: Il file scaricato non è un archivio valido. Controlla la connessione internet."
-  echo "Contenuto del file scaricato:"
-  head -n 5 nvim-linux64.tar.gz
+# Verifica integrità download (evita errori gzip)
+if ! file "$NVIM_FILENAME" | grep -q "gzip compressed data"; then
+  echo "❌ ERRORE: Il file scaricato non è valido. Controlla la connessione."
+  rm "$NVIM_FILENAME"
   exit 1
 fi
 
-echo "   📦 Estrazione..."
-# Pulisce vecchia versione ed estrae la nuova
-rm -rf "$HOME/.local/share/nvim-linux64"
-tar -xzf nvim-linux64.tar.gz -C "$HOME/.local/share/"
-rm nvim-linux64.tar.gz
-
-# Link simbolico
-ln -sf "$HOME/.local/share/nvim-linux64/bin/nvim" "$INSTALL_DIR/nvim"
-
-echo "   ✅ Neovim installato: $($INSTALL_DIR/nvim --version | head -n 1)"
-
-# installazione di LazyVim
-echo "   💤 Clonazione LazyVim Starter..."
-
-# Backup preventivo (se esiste già una config)
-if [ -d "$HOME/.config/nvim" ]; then
-  mv "$HOME/.config/nvim" "$HOME/.config/nvim.bak.$(date +%s)"
+# 2. Pulisce installazioni precedenti in /opt
+echo "   🧹 Pulizia vecchia versione in /opt..."
+if [ -d "$INSTALL_DIR" ]; then
+  sudo rm -rf "$INSTALL_DIR"
 fi
 
-# Clone della repo
-git clone https://github.com/LazyVim/starter "$HOME/.config/nvim"
+# 3. Estrae in /opt (Richiede sudo)
+echo "   📦 Estrazione in /opt..."
+sudo tar -C /opt -xzf "$NVIM_FILENAME"
 
-# Rimuove il link a git dello starter kit
-rm -rf "$HOME/.config/nvim/.git"
+# 4. Rende il comando disponibile globalmente (sostituisce l'export PATH)
+# Creiamo un link simbolico in /usr/local/bin che è già nel PATH di tutti
+echo "   🔗 Creazione link simbolico..."
+sudo ln -sf "$INSTALL_DIR/bin/nvim" /usr/local/bin/nvim
 
-echo "   ✅ LazyVim configurato! (I plugin si installeranno al primo avvio)"
+# 5. Pulizia file temporaneo
+rm "$NVIM_FILENAME"
+
+# 6. Setup LazyVim (Opzionale, se vuoi mantenerlo)
+echo "   💤 Configurazione LazyVim..."
+if [ ! -d "$HOME/.config/nvim" ]; then
+  git clone https://github.com/LazyVim/starter "$HOME/.config/nvim"
+  rm -rf "$HOME/.config/nvim/.git"
+fi
+
+echo "   ✅ Neovim installato: $(nvim --version | head -n 1)"
