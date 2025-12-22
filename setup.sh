@@ -22,5 +22,7 @@ done 2>/dev/null &
 ./scripts_bin/04-docker.sh
 ./scripts_bin/05-fonts.sh
 ./scripts_bin/06-starship.sh
+./scripts_bin/07-sway-install.sh
+./scripts_bin/08-sway-config.sh
 
 echo "✅ FINITO! Riavvia il computer."
