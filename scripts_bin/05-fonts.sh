@@ -1,33 +1,50 @@
 #!/bin/bash
-# scripts_bin/05-fonts.sh
+set -e
 
 echo "--------------------------------------"
-echo "🔤 [5/5] Installazione Nerd Fonts"
+echo "🔤 [5/5] Installazione Nerd Fonts (Fix Cache)"
 echo "--------------------------------------"
 
-# Definisci quale font vuoi (JetBrainsMono è il preferito per LazyVim)
+# Variabili
 FONT_NAME="JetBrainsMono"
-FONT_URL="https://github.com/ryanoasis/nerd-fonts/releases/latest/download/${FONT_NAME}.zip"
+FONT_URL="https://github.com/ryanoasis/nerd-fonts/releases/latest/download/${FONT_NAME}.tar.xz"
+# Nota: I NerdFonts recenti usano spesso tar.xz invece di zip, ma controlliamo l'estensione.
+# Se preferisci lo zip (più comune per compatibilità):
+FONT_URL_ZIP="https://github.com/ryanoasis/nerd-fonts/releases/latest/download/${FONT_NAME}.zip"
+
 FONT_DIR="$HOME/.local/share/fonts"
+TEMP_DIR=$(mktemp -d)
 
-echo "   ⬇️  Scaricamento $FONT_NAME Nerd Font..."
-
-# Crea la cartella se non esiste
+# 1. Preparazione
+echo "   📂 Creazione cartella font: $FONT_DIR"
 mkdir -p "$FONT_DIR"
 
-# Scarica lo zip in una cartella temporanea
-TEMP_DIR=$(mktemp -d)
-curl -L --fail -o "$TEMP_DIR/font.zip" "$FONT_URL"
+# 2. Scaricamento
+echo "   ⬇️  Scaricamento $FONT_NAME..."
+# Scarichiamo lo zip che è più sicuro da gestire
+curl -L --fail -o "$TEMP_DIR/font.zip" "$FONT_URL_ZIP"
 
-# Estrae solo i file .ttf/.otf nella cartella font dell'utente
-unzip -o -q "$TEMP_DIR/font.zip" -d "$TEMP_DIR"
-mv "$TEMP_DIR"/*.ttf "$FONT_DIR/" 2>/dev/null || true
-mv "$TEMP_DIR"/*.otf "$FONT_DIR/" 2>/dev/null || true
+# 3. Estrazione e Installazione "Intelligente"
+echo "   📦 Estrazione..."
+unzip -q "$TEMP_DIR/font.zip" -d "$TEMP_DIR"
 
-# Pulisce
+# Cerca TUTTI i file ttf/otf ricorsivamente e spostali nella font dir
+# Questo risolve il problema se lo zip ha sottocartelle
+echo "   🚚 Spostamento file..."
+find "$TEMP_DIR" -name "*.[ot]tf" -exec mv {} "$FONT_DIR/" \;
+
+# 4. Rigenerazione Cache (Il passaggio CRUCIALE)
+echo "   🔄 Rigenerazione Cache Font (fc-cache)..."
+fc-cache -f -v >/dev/null
+
+# 5. Pulizia
 rm -rf "$TEMP_DIR"
 
-echo "   🔄 Aggiornamento cache font..."
-fc-cache -fv >/dev/null
-
-echo "   ✅ $FONT_NAME installato correttamente!"
+# 6. Verifica
+echo "   ✅ Verifica installazione:"
+if fc-list | grep -q "$FONT_NAME"; then
+  echo "      SUCCESS: Il sistema vede correttamente $FONT_NAME"
+else
+  echo "      WARNING: Il font è installato ma fc-list non lo trova ancora."
+  echo "      Prova a riavviare la sessione o lanciare 'fc-cache -fv' manualmente."
+fi
