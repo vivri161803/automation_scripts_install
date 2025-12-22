@@ -20,5 +20,6 @@ done 2>/dev/null &
 ./scripts_bin/02-nvim.sh
 ./scripts_bin/03-gnome.sh
 ./scripts_bin/04-docker.sh
+./scripts_bin/05-fonts.sh
 
 echo "✅ FINITO! Riavvia il computer."
