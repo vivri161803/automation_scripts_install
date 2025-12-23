@@ -2,14 +2,14 @@
 set -e
 
 echo "----------------------------------------------------"
-echo "🚀 HOST REAL METAL: Installazione Sway & Waybar"
+echo "🚀 HOST REAL METAL: Installazione Sway & Network Tools"
 echo "----------------------------------------------------"
 
 # 1. Aggiorna i repository
 sudo apt update
 
 # 2. Installazione Pacchetti
-# Aggiunto: brightnessctl (per luminosità schermo)
+# Aggiunti: network-manager-gnome (GUI Wifi), wtype (Simulazione tasti per ~ e |)
 echo "   ⬇️  Installazione pacchetti..."
 sudo apt install -y \
   sway swaybg swayidle swaylock \
@@ -17,6 +17,8 @@ sudo apt install -y \
   grim slurp wl-clipboard \
   pavucontrol pamixer pulseaudio-utils \
   brightnessctl \
+  network-manager-gnome \
+  wtype \
   fonts-font-awesome papirus-icon-theme \
   xdg-desktop-portal xdg-desktop-portal-wlr xdg-desktop-portal-gtk \
   libglib2.0-bin wlogout

@@ -2,21 +2,19 @@
 set -e
 
 echo "----------------------------------------------------"
-echo "⚙️  HOST REAL METAL: Configurazione Master (Sway + Waybar + Wlogout)"
+echo "⚙️  HOST REAL METAL: Config Master (Fixed Shortcuts)"
 echo "----------------------------------------------------"
 
-# 1. Pulizia vecchie config
-# Rimuoviamo tutto per essere sicuri che non ci siano file vecchi o corrotti
+# 1. Pulizia
 rm -f "$HOME/.config/sway/config"
 rm -f "$HOME/.config/waybar/config"
 rm -f "$HOME/.config/waybar/style.css"
 rm -f "$HOME/.config/wofi/config"
 rm -f "$HOME/.config/wofi/style.css"
 rm -f "$HOME/.config/mako/config"
-rm -rf "$HOME/.config/wlogout" # Rimuove cartella wlogout
+rm -rf "$HOME/.config/wlogout"
 
-# Creiamo le cartelle necessarie
-mkdir -p "$HOME/.config/sway"
+mkdir -p "$HOME/.config/sway/scripts"
 mkdir -p "$HOME/.config/waybar"
 mkdir -p "$HOME/.config/wofi"
 mkdir -p "$HOME/.config/mako"
@@ -30,8 +28,7 @@ set \$mod Mod4
 set \$term kitty
 set \$menu wofi --show drun --allow-images --insensitive
 
-# --- HARDWARE REALE ---
-# Touchpad: tap to click e scroll naturale
+# --- HARDWARE & INPUT ---
 input type:touchpad {
     dwt enabled
     tap enabled
@@ -39,16 +36,20 @@ input type:touchpad {
     middle_emulation enabled
 }
 
-# Tastiera Italiana
-input type:keyboard {
-    xkb_layout it
+input type:keyboard { 
+    xkb_layout gb
+    # Assicura che Alt Destro sia AltGr (Mod5)
+    xkb_options lv3:ralt_switch
 }
+
+# --- CARATTERI CUSTOM (FIXED) ---
+# Usiamo 'sleep 0.1' per evitare che AltGr interferisca con wtype
+bindsym Mod5+i exec sh -c 'sleep 0.1 && wtype "~"'
+bindsym Mod5+l exec sh -c 'sleep 0.1 && wtype "|"'
 
 # --- VISUAL ---
 seat seat0 xcursor_theme default 24
 font pango:JetBrainsMono Nerd Font 10
-
-# Spaziature e Bordi
 gaps inner 12
 gaps outer 5
 default_border pixel 2
@@ -70,6 +71,7 @@ exec --no-startup-id dbus-update-activation-environment --systemd WAYLAND_DISPLA
 # --- AUTOSTART ---
 exec_always --no-startup-id mako
 exec_always --no-startup-id waybar
+exec --no-startup-id nm-applet --indicator
 exec --no-startup-id /usr/lib/policykit-1-gnome/polkit-gnome-authentication-agent-1
 
 # --- TASTI ---
@@ -77,13 +79,10 @@ bindsym \$mod+Return exec \$term
 bindsym \$mod+d exec \$menu
 bindsym \$mod+q kill
 bindsym \$mod+Shift+r reload
-# Uscita rapida con wlogout anche da tastiera (Mod+Shift+E)
 bindsym \$mod+Shift+e exec wlogout
-
-# Screenshot
 bindsym \$mod+Shift+s exec grim -g "\$(slurp)" - | wl-copy
 
-# Tasti Multimediali
+# Multimedia
 bindsym XF86AudioRaiseVolume exec pamixer -i 5
 bindsym XF86AudioLowerVolume exec pamixer -d 5
 bindsym XF86AudioMute exec pamixer -t
@@ -110,7 +109,7 @@ bindsym \$mod+Shift+2 move container to workspace 2
 bindsym \$mod+Shift+3 move container to workspace 3
 bindsym \$mod+Shift+4 move container to workspace 4
 
-# Resize Mode
+# Resize
 mode "resize" {
     bindsym h resize shrink width 10px
     bindsym j resize grow height 10px
@@ -123,7 +122,7 @@ bindsym \$mod+r mode "resize"
 EOF
 
 # ==================== 2. WAYBAR CONFIG ====================
-echo "   📝 Scrivendo Waybar Config (con Wlogout)..."
+echo "   📝 Scrivendo Waybar Config..."
 cat <<EOF >"$HOME/.config/waybar/config"
 {
     "layer": "top", "position": "top", "height": 40,
@@ -131,7 +130,7 @@ cat <<EOF >"$HOME/.config/waybar/config"
     
     "modules-left": ["custom/launcher", "sway/workspaces"],
     "modules-center": ["clock"],
-    "modules-right": ["pulseaudio", "backlight", "memory", "cpu", "battery", "tray", "custom/power"],
+    "modules-right": ["pulseaudio", "network", "backlight", "memory", "cpu", "battery", "tray", "custom/power"],
 
     "custom/launcher": { "format": "  ", "on-click": "wofi --show drun --allow-images --insensitive", "tooltip": false },
     "sway/workspaces": { "disable-scroll": true, "all-outputs": true, "format": "{name}" },
@@ -142,6 +141,16 @@ cat <<EOF >"$HOME/.config/waybar/config"
         "on-click": "kitty --hold -e cal -y" 
     },
 
+    "network": {
+        "format-wifi": "  {essid}",
+        "format-ethernet": "  Wired",
+        "format-linked": "  {ifname} (No IP)",
+        "format-disconnected": "⚠ Disconnected",
+        "format-alt": "{ifname}: {ipaddr}/{cidr}",
+        "tooltip-format": "{ifname} via {gwaddr}",
+        "on-click": "nm-connection-editor"
+    },
+
     "pulseaudio": {
         "format": "{icon} {volume}%", "format-muted": "🔇 Muto",
         "format-icons": { "default": ["", "", ""] },
@@ -149,29 +158,12 @@ cat <<EOF >"$HOME/.config/waybar/config"
         "scroll-step": 5
     },
 
-    "backlight": {
-        "device": "intel_backlight",
-        "format": "{icon} {percent}%",
-        "format-icons": ["", ""]
-    },
-
-    "battery": {
-        "states": { "warning": 30, "critical": 15 },
-        "format": "{icon} {capacity}%",
-        "format-charging": " {capacity}%",
-        "format-icons": ["", "", "", "", ""]
-    },
-
+    "backlight": { "device": "intel_backlight", "format": "{icon} {percent}%", "format-icons": ["", ""] },
+    "battery": { "states": { "warning": 30, "critical": 15 }, "format": "{icon} {capacity}%", "format-charging": " {capacity}%", "format-icons": ["", "", "", "", ""] },
     "memory": { "interval": 30, "format": " {}%", "on-click": "kitty -e btop" },
     "cpu": { "interval": 10, "format": " {usage}%", "on-click": "kitty -e btop" },
     "tray": { "icon-size": 18, "spacing": 10 },
-    
-    // QUI ABBIAMO CAMBIATO IL COMANDO IN WLOGOUT
-    "custom/power": { 
-        "format": "⏻", 
-        "tooltip": false, 
-        "on-click": "wlogout" 
-    }
+    "custom/power": { "format": "⏻", "tooltip": false, "on-click": "wlogout" }
 }
 EOF
 
@@ -181,7 +173,7 @@ cat <<EOF >"$HOME/.config/waybar/style.css"
 * { border: none; border-radius: 0; font-family: "JetBrainsMono Nerd Font"; font-size: 14px; font-weight: bold; min-height: 0; }
 window#waybar { background: transparent; color: #cdd6f4; }
 
-#custom-launcher, #workspaces, #clock, #pulseaudio, #backlight, #memory, #cpu, #battery, #tray, #custom-power {
+#custom-launcher, #workspaces, #clock, #pulseaudio, #network, #backlight, #memory, #cpu, #battery, #tray, #custom-power {
     background-color: #1e1e2e; color: #cdd6f4; padding: 0 15px; margin: 0 4px; border-radius: 15px; border: 2px solid #11111b; box-shadow: 2px 2px 2px 0px rgba(0,0,0,0.2);
 }
 
@@ -191,91 +183,43 @@ window#waybar { background: transparent; color: #cdd6f4; }
 #workspaces button.urgent { color: #f38ba8; }
 #clock { color: #b4befe; background-color: #1e1e2e; }
 
+#network { color: #74c7ec; }
+#network.disconnected { color: #f38ba8; }
+
 #pulseaudio { color: #a6e3a1; }
 #pulseaudio.muted { background-color: #f38ba8; color: #1e1e2e; }
-
 #backlight { color: #f9e2af; }
 #battery { color: #a6e3a1; }
 #battery.warning { color: #fab387; }
-#battery.critical { 
-    color: #f38ba8; 
-    animation-name: blink; 
-    animation-duration: 0.5s; 
-    animation-timing-function: linear; 
-    animation-iteration-count: infinite; 
-    animation-direction: alternate;
-}
-
+#battery.critical { color: #f38ba8; animation-name: blink; animation-duration: 0.5s; animation-timing-function: linear; animation-iteration-count: infinite; animation-direction: alternate; }
 #memory { color: #f9e2af; }
 #cpu { color: #fab387; }
 #custom-power { background-color: #f38ba8; color: #1e1e2e; padding-left: 12px; padding-right: 14px; }
-
 @keyframes blink { to { background-color: #ffffff; color: #000000; } }
 EOF
 
-# ==================== 4. WLOGOUT CONFIG ====================
-echo "   🚪 Scrivendo config Wlogout..."
+# ==================== 4. WLOGOUT & WOFI & MAKO ====================
+echo "   🚪 Scrivendo config Wlogout/Wofi/Mako..."
 cat <<EOF >"$HOME/.config/wlogout/layout"
-{
-    "label" : "lock",
-    "action" : "swaylock",
-    "text" : "Blocca",
-    "keybind" : "l"
-}
-{
-    "label" : "hibernate",
-    "action" : "systemctl hibernate",
-    "text" : "Ibernazione",
-    "keybind" : "h"
-}
-{
-    "label" : "logout",
-    "action" : "swaymsg exit",
-    "text" : "Esci",
-    "keybind" : "e"
-}
-{
-    "label" : "shutdown",
-    "action" : "systemctl poweroff",
-    "text" : "Spegni",
-    "keybind" : "s"
-}
-{
-    "label" : "suspend",
-    "action" : "systemctl suspend",
-    "text" : "Sospendi",
-    "keybind" : "u"
-}
-{
-    "label" : "reboot",
-    "action" : "systemctl reboot",
-    "text" : "Riavvia",
-    "keybind" : "r"
-}
+{ "label" : "lock", "action" : "swaylock", "text" : "Blocca", "keybind" : "l" }
+{ "label" : "hibernate", "action" : "systemctl hibernate", "text" : "Ibernazione", "keybind" : "h" }
+{ "label" : "logout", "action" : "swaymsg exit", "text" : "Esci", "keybind" : "e" }
+{ "label" : "shutdown", "action" : "systemctl poweroff", "text" : "Spegni", "keybind" : "s" }
+{ "label" : "suspend", "action" : "systemctl suspend", "text" : "Sospendi", "keybind" : "u" }
+{ "label" : "reboot", "action" : "systemctl reboot", "text" : "Riavvia", "keybind" : "r" }
 EOF
 
 cat <<EOF >"$HOME/.config/wlogout/style.css"
-* {
-    background-image: none;
-    font-family: "JetBrainsMono Nerd Font", monospace;
-}
+* { background-image: none; font-family: "JetBrainsMono Nerd Font", monospace; }
 window { background-color: rgba(30, 30, 46, 0.85); }
 button {
-    color: #cdd6f4;
-    background-color: #313244;
-    border-style: solid;
-    border-width: 2px;
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: 25%;
-    border-radius: 20px;
-    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
-    margin: 10px;
+    color: #cdd6f4; background-color: #313244; border-style: solid; border-width: 2px;
+    background-repeat: no-repeat; background-position: center; background-size: 25%;
+    border-radius: 20px; box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2); margin: 10px;
     transition: box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
 }
 button:hover { background-color: #45475a; color: #cba6f7; outline-style: none; }
 button:focus { background-color: #cba6f7; color: #1e1e2e; }
-
 #lock { background-image: image(url("/usr/share/wlogout/icons/lock.png")); border-color: #fab387; }
 #logout { background-image: image(url("/usr/share/wlogout/icons/logout.png")); border-color: #f9e2af; }
 #suspend { background-image: image(url("/usr/share/wlogout/icons/suspend.png")); border-color: #89b4fa; }
@@ -284,8 +228,6 @@ button:focus { background-color: #cba6f7; color: #1e1e2e; }
 #reboot { background-image: image(url("/usr/share/wlogout/icons/reboot.png")); border-color: #94e2d5; }
 EOF
 
-# ==================== 5. WOFI & MAKO ====================
-echo "   🚀 Scrivendo config Wofi e Mako..."
 cat <<EOF >"$HOME/.config/wofi/config"
 mode=drun
 show=drun
@@ -316,8 +258,5 @@ border-radius=10
 default-timeout=5000
 EOF
 
-echo "   ✅ Configurazione Master Completata!"
-echo "      - Waybar fixato (Batteria + CSS)"
-echo "      - Wlogout integrato (Icone Catppuccin)"
-echo "      - Sway configurato per Hardware Reale"
-echo "   👉 Riavvia Sway (Win+Shift+R) o fai Reboot."
+echo "   ✅ Configurazione Riparata e Aggiornata!"
+echo "   👉 Esegui 'swaymsg reload' (Win+Shift+R) per applicare."
