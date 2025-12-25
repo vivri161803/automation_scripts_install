@@ -1,0 +1,2 @@
+sudo pacman -S swaybg waybar wofi kitty grim slurp pamixer brightnessctl polkit-gnome wtype
+yay -S autotiling

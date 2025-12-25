@@ -1,0 +1,120 @@
+# --- VARIABILI ---
+set $mod Mod4
+set $term kitty
+# Nota: Su CachyOS assicurati di avere wofi installato, oppure usa rofi
+set $menu wofi --show drun --allow-images --insensitive
+
+# --- HARDWARE & INPUT ---
+input type:touchpad {
+    dwt enabled
+    tap enabled
+    natural_scroll enabled
+    middle_emulation enabled
+}
+
+input type:keyboard {
+    xkb_layout gb
+    # Mappa Alt Destro come AltGr (Mod5) e CapsLock come Ctrl
+    xkb_options lv3:ralt_switch,ctrl:nocaps
+}
+
+# --- CARATTERI CUSTOM (MACRO) ---
+# Richiede il pacchetto 'wtype' installato
+bindsym Mod5+i exec sh -c 'sleep 0.1 && wtype "~"'
+bindsym Mod5+l exec sh -c 'sleep 0.1 && wtype "|"'
+bindsym Mod5+k exec sh -c 'sleep 0.1 && wtype -k backslash'
+
+# --- GESTIONE FINESTRE ---
+# Richiede il pacchetto 'autotiling'
+exec_always autotiling
+
+# --- VISUAL ---
+seat seat0 xcursor_theme default 24
+font pango:JetBrainsMono Nerd Font 10
+gaps inner 10
+gaps outer 5
+default_border pixel 2
+default_floating_border pixel 2
+smart_borders on
+
+# --- COLORI (Catppuccin Mocha) ---
+# class                 border  backgr. text    indicator child_border
+client.focused          #cba6f7 #1e1e2e #cdd6f4 #cba6f7   #cba6f7
+client.focused_inactive #6c7086 #1e1e2e #6c7086 #6c7086   #6c7086
+client.unfocused        #313244 #1e1e2e #a6adc8 #313244   #313244
+client.urgent           #f38ba8 #1e1e2e #f38ba8 #f38ba8   #f38ba8
+
+# --- OUTPUT (SFONDO) ---
+# IMPORTANTE: Cambia il percorso con il tuo username attuale e immagine reale
+output * bg /usr/share/backgrounds/cachyos-wallpapers/liquid.png fill
+
+# --- SYSTEM INTEGRATION ---
+# Questo comando su Arch è spesso gestito da systemd, ma lasciarlo non fa danni.
+exec --no-startup-id dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=sway
+
+# --- AUTOSTART ---
+# Notifiche: Usa SwayNC invece di Mako
+exec_always --no-startup-id swaync
+
+# Barra di stato
+exec_always --no-startup-id waybar
+
+# Network Manager Applet
+exec --no-startup-id nm-applet --indicator
+
+# Polkit Agent (CORRETTO PER ARCH/CACHYOS)
+exec --no-startup-id /usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1
+
+# --- TASTI ---
+bindsym $mod+Return exec $term
+bindsym $mod+space exec $menu
+bindsym $mod+q kill
+bindsym $mod+Shift+r reload
+bindsym $mod+Shift+e exec wlogout
+
+# Notifiche Center (Apertura manuale)
+bindsym $mod+n exec swaync-client -t -sw
+
+# Screenshot (grim + slurp)
+# Copia nella clipboard
+bindsym $mod+Shift+s exec grim -g "$(slurp)" - | wl-copy
+# Salva su file (crea la cartella se non esiste)
+bindsym $mod+Print exec mkdir -p ~/Pictures/Screenshots && grim -g "$(slurp)" "$HOME/Pictures/Screenshots/Screen-$(date +'%Y-%m-%d-%H%M%S').png"
+
+# Multimedia (Richiede pamixer e brightnessctl)
+bindsym XF86AudioRaiseVolume exec pamixer -i 5
+bindsym XF86AudioLowerVolume exec pamixer -d 5
+bindsym XF86AudioMute exec pamixer -t
+bindsym XF86MonBrightnessUp exec brightnessctl set +10%
+bindsym XF86MonBrightnessDown exec brightnessctl set 10%-
+
+# Navigazione (Vim style)
+bindsym $mod+h focus left
+bindsym $mod+j focus down
+bindsym $mod+k focus up
+bindsym $mod+l focus right
+bindsym $mod+Shift+h move left
+bindsym $mod+Shift+j move down
+bindsym $mod+Shift+k move up
+bindsym $mod+Shift+l move right
+
+# Workspaces
+bindsym $mod+1 workspace 1
+bindsym $mod+2 workspace 2
+bindsym $mod+3 workspace 3
+bindsym $mod+4 workspace 4
+bindsym $mod+Shift+1 move container to workspace 1
+bindsym $mod+Shift+2 move container to workspace 2
+bindsym $mod+Shift+3 move container to workspace 3
+bindsym $mod+Shift+4 move container to workspace 4
+
+# Resize
+mode "resize" {
+    bindsym h resize shrink width 10px
+    bindsym j resize grow height 10px
+    bindsym k resize shrink height 10px
+    bindsym l resize grow width 10px
+    bindsym Return mode "default"
+    bindsym Escape mode "default"
+}
+bindsym $mod+r mode "resize"
